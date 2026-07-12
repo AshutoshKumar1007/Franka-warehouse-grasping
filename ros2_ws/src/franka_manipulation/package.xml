@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="3">
+
+  <name>franka_manipulation</name>
+  <version>0.1.0</version>
+
+  <description>
+    MoveIt-based pick-and-place execution for the Franka FR3.
+  </description>
+
+  <maintainer email="you@example.com">
+    Ashutosh Kumar
+  </maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <depend>moveit_ros_planning_interface</depend>
+  <depend>moveit_msgs</depend>
+
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <depend>control_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>
