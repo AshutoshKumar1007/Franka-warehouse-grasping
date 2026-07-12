@@ -11,7 +11,7 @@ through MoveIt 2.
 This repo contains the packages built for the assessment, layered into the same
 workspace as the provided sim packages.
 
-## Pipeline Overview
+## 1. Pipeline Overview
 
 The grasping pipeline is intentionally organized as a collection of independent modules, each responsible for a single stage of the perception-to-manipulation workflow. Modules communicate exclusively through ROS2 topics (within the robotics stack) or a lightweight ZeroMQ protocol (between ROS and the deep-learning inference backend), allowing individual components to be developed, tested, and replaced independently.
 
@@ -73,7 +73,7 @@ To improve robustness, the communication layer also exposes configurable ROS par
 
 While this synchronization mechanism is sufficient for a single-camera, single-object pipeline, future iterations could adopt a fully event-driven architecture using ROS Actions, Services, or asynchronous task queues to better support multiple concurrent perception sources and higher-throughput inference.
 
-## Repository Structure
+## 2. Repository Structure
 
 The repository consists of three primary components: the ROS2 workspace, an external inference server, and a small shared communication library.
 
@@ -134,7 +134,7 @@ Vegam/
             Upstream simulation and robot description packages.
 ```
 
-### Project Organization
+### 2.1 Project Organization
 
 The repository intentionally separates robotics infrastructure from machine-learning inference.
 
@@ -144,11 +144,45 @@ The repository intentionally separates robotics infrastructure from machine-lear
 
 This organization keeps the robotics stack independent of any particular grasp generation model while allowing the inference backend to evolve without affecting the rest of the system.---
 
-# 3. Components
+## 3. Getting started
+
+```bash
+# 1 — simulation
+cd ~/Vegam && source activate.sh
+ros2 launch franka_warehouse_world warehouse.launch.py \
+    world:=test load_gripper:=true rviz:=false
+
+# 2 — MoveIt
+cd ~/Vegam && source activate.sh
+ros2 launch franka_warehouse_world moveit.launch.py \
+    world:=test load_gripper:=true
+
+# 3 — perception
+cd ~/Vegam && source activate.sh
+ros2 launch franka_perception perception.launch.py world_name:=warehouse_world_test
+
+# 4 — preprocessing
+cd ~/Vegam && source activate.sh
+ros2 launch franka_perception preprocessing.launch.py
+
+# 5 — inference server (separate venv, not the ROS workspace)
+cd ~/Vegam/inference_server && source venv/bin/activate
+python -m server.runner
+
+# 6 — grasping
+cd ~/Vegam && source activate.sh
+ros2 launch franka_grasping grasp.launch.py
+
+# 7 — manipulation
+cd ~/Vegam && source activate.sh
+ros2 launch franka_manipulation manipulation.launch.py
+```
+
+# 4. Components
 
 ---
 
-## 3.1 `franka_perception`
+## 4.1 `franka_perception`
 
 The perception package is responsible for acquiring RGB-D data from the simulation, transforming it into the robot reference frame, and preparing a clean point cloud for grasp generation. It is intentionally divided into two independent nodes so that sensor acquisition and point cloud preprocessing remain loosely coupled.
 
@@ -194,7 +228,7 @@ The workspace crop plays a significant role in grasp quality. Removing the table
 
 ---
 
-## 3.2 `franka_grasping`
+## 4.2 `franka_grasping`
 
 This package forms the bridge between the ROS ecosystem and the AI-based grasp generation backend. It converts incoming point clouds into inference requests, communicates with the external inference server, filters the returned grasp candidates, and publishes the final grasp for execution.
 
@@ -241,7 +275,7 @@ Since the preprocessing node continuously streams point clouds, inference reques
 
 ---
 
-## 3.3 `inference_server`
+## 4.3 `inference_server`
 
 The inference server hosts the deep-learning grasp generation model outside the ROS workspace. It runs as an independent Python process with its own virtual environment and communicates with ROS exclusively through the ZeroMQ protocol.
 
@@ -287,7 +321,7 @@ This abstraction also makes it straightforward to replace Contact-GraspNet with 
 
 ---
 
-## 3.4 `franka_manipulation`
+## 4.4 `franka_manipulation`
 
 The manipulation package is responsible for executing the selected grasp using MoveIt 2. It receives grasp candidates from the grasping node, plans collision-aware trajectories, and executes the complete pick-and-place sequence inside Gazebo.
 
@@ -354,7 +388,7 @@ The current implementation focuses on reliable execution of a single selected gr
 
 ---
 
-## 3.5 `franka_interfaces`
+## 4.5 `franka_interfaces`
 
 A lightweight ROS interface package containing the custom message definitions shared between the Python grasp generation pipeline and the C++ manipulation stack.
 
@@ -381,7 +415,7 @@ C++ Nodes
 The package currently defines the `GraspCandidate` message, which encapsulates the selected grasp pose, gripper width and confidence score. By isolating interfaces into a dedicated package, both Python and C++ components share a single source of truth for message definitions while remaining independently maintainable.
 
 ---
-## 4. Current Status
+## 5. Current Status
 
 The complete perception-to-manipulation pipeline has been implemented and integrated. Sensor acquisition, preprocessing, grasp generation, motion planning, and manipulation communicate through well-defined interfaces and can be developed or replaced independently.
 
@@ -403,7 +437,7 @@ Future improvements include:
 
 ---
 ---
-## 5. Modifications to the Provided Simulation
+## 6. Modifications to the Provided Simulation
 
 Several changes were made to the original simulation environment to support a complete autonomous grasping pipeline.
 
@@ -429,7 +463,7 @@ Several changes were made to the original simulation environment to support a co
 - Introduced a standalone inference server communicating through ZeroMQ, allowing the AI backend to remain independent of the ROS workspace.
 
 ------
-## 6. Acknowledgments
+## 7. Acknowledgments
 
 This project builds upon the following open-source software:
 
@@ -440,36 +474,3 @@ This project builds upon the following open-source software:
 
 Special thanks to the authors and maintainers of these open-source projects for making their work publicly available.---
 
-## 7. Getting started
-
-```bash
-# 1 — simulation
-cd ~/Vegam && source activate.sh
-ros2 launch franka_warehouse_world warehouse.launch.py \
-    world:=test load_gripper:=true rviz:=false
-
-# 2 — MoveIt
-cd ~/Vegam && source activate.sh
-ros2 launch franka_warehouse_world moveit.launch.py \
-    world:=test load_gripper:=true
-
-# 3 — perception
-cd ~/Vegam && source activate.sh
-ros2 launch franka_perception perception.launch.py world_name:=warehouse_world_test
-
-# 4 — preprocessing
-cd ~/Vegam && source activate.sh
-ros2 launch franka_perception preprocessing.launch.py
-
-# 5 — inference server (separate venv, not the ROS workspace)
-cd ~/Vegam/inference_server && source venv/bin/activate
-python -m server.runner
-
-# 6 — grasping
-cd ~/Vegam && source activate.sh
-ros2 launch franka_grasping grasp.launch.py
-
-# 7 — manipulation
-cd ~/Vegam && source activate.sh
-ros2 launch franka_manipulation manipulation.launch.py
-```
