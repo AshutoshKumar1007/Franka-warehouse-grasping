@@ -1,5 +1,7 @@
 #include "franka_manipulation/transforms.hpp"
 
+#include <tf2_eigen/tf2_eigen.hpp>
+
 namespace franka_manipulation
 {
 
@@ -9,18 +11,31 @@ compute_pregrasp_pose(
     double offset
 )
 {
-    auto pose = grasp_pose;
-
+    // Back off along the GRASP's own approach axis, not world Z.
     //
-    // Temporary implementation.
+    // Convention assumed here (standard for GraspNet / Contact-
+    // GraspNet / AnyGrasp-style candidates): the grasp frame's
+    // local +Z axis points from the wrist toward the object,
+    // i.e. it's the direction the gripper drives IN to grasp.
+    // Backing off means moving along -Z of that same frame.
     //
-    // Contact-GraspNet already predicts the hand pose.
-    // For now, back off along world Z.
-    //
+    // If, after this fix, the arm still drives further into the
+    // object/table instead of retreating, your generator uses the
+    // opposite sign convention — flip `approach_axis` below to
+    // `-T.rotation().col(2)`, or check the frame convention docs
+    // for whichever grasp network you're using.
+    Eigen::Isometry3d T;
+    tf2::fromMsg(grasp_pose.pose, T);
 
-    pose.pose.position.z += offset;
+    Eigen::Vector3d approach_axis = T.rotation().col(2);
 
-    return pose;
+    Eigen::Isometry3d T_pregrasp = T;
+    T_pregrasp.translation() -= approach_axis * offset;
+
+    geometry_msgs::msg::PoseStamped pregrasp = grasp_pose;
+    pregrasp.pose = tf2::toMsg(T_pregrasp);
+
+    return pregrasp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -31,6 +46,8 @@ compute_lift_pose(
     double lift_distance
 )
 {
+    // Lifting is deliberately kept in world Z (straight up),
+    // regardless of the grasp orientation.
     auto pose = grasp_pose;
 
     pose.pose.position.z += lift_distance;

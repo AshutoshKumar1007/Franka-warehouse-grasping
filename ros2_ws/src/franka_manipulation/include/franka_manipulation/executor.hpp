@@ -31,6 +31,18 @@ public:
 
 private:
 
+    bool execute_pregrasp(
+        const franka_interfaces::msg::GraspCandidate& grasp
+    );
+
+    bool execute_approach(
+        const franka_interfaces::msg::GraspCandidate& grasp
+    );
+
+    bool execute_lift(
+        const franka_interfaces::msg::GraspCandidate& grasp
+    );
+
     rclcpp::Node& node_;
 
     std::unique_ptr<Arm> arm_;
