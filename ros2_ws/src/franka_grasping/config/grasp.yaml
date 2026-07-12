@@ -7,6 +7,21 @@ grasp_node:
     server_host: "localhost"
     server_port: 5555
 
+    # How long to wait for one inference reply before giving up on
+    # this point cloud. If you see WARN "did not respond" at almost
+    # exactly this interval, repeatedly, it means the server is
+    # behind (CPU/GPU contention from running the full stack on one
+    # machine), not actually dead — raise this before assuming
+    # something is broken.
+    server_timeout_ms: 8000
+
+    # Resend the SAME request this many times after a timeout before
+    # giving up on the point cloud. Leave at 0 unless you've confirmed
+    # via the round-trip logs that the server is only occasionally
+    # slow — retries add more load onto an already-behind server and
+    # can make a backlog worse.
+    server_max_retries: 0
+
     max_grasps: 50
     score_threshold: 0.10
   

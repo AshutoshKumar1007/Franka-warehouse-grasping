@@ -4,6 +4,7 @@ ROS grasp generation node.
 
 from __future__ import annotations
 
+import threading
 import time 
 
 import rclpy
@@ -36,6 +37,8 @@ class GraspNode(Node):
         self.declare_parameter("output_topic", "/selected_grasp")
         self.declare_parameter("server_host", "localhost")
         self.declare_parameter("server_port", 5555)
+        self.declare_parameter("server_timeout_ms", 8000)
+        self.declare_parameter("server_max_retries", 0)
         self.declare_parameter("max_grasps", 50)
         self.declare_parameter("score_threshold", 0.10)
         
@@ -44,11 +47,17 @@ class GraspNode(Node):
         output_topic = self.get_parameter("output_topic").value
         host  = self.get_parameter("server_host").value
         port  = self.get_parameter("server_port").value
+        self.server_timeout_ms = self.get_parameter("server_timeout_ms").value
+        self.server_max_retries = self.get_parameter("server_max_retries").value
         self.max_grasps = self.get_parameter("max_grasps").value
         self.score_threshold = self.get_parameter("score_threshold").value
         
         #Pipeline
-        self.client = ZMQInferenceClient(host, port)
+        self.client = ZMQInferenceClient(
+            host,
+            port,
+            timeout=self.server_timeout_ms,
+        )
         
         self.selector = GraspSelector()
         self.visualizer = GraspVisualizer(self)
@@ -76,15 +85,29 @@ class GraspNode(Node):
         self.get_logger().info(
             f"Grasp node initialized."
         )
-        self.busy = False
-        
+
+        # Fair blocking/releasing: acquire non-blocking, always
+        # release in `finally`. A plain bool worked here only because
+        # rclpy's default executor runs callbacks on one thread — the
+        # Lock makes the mutual-exclusion intent explicit and keeps
+        # this safe if the executor ever changes (MultiThreadedExecutor,
+        # a reentrant callback group, etc).
+        self.busy_lock = threading.Lock()
+
     def cloud_cb(self, cloud_msg: PointCloud2):
         """ 
         PointCloud2 -> Numpy
         """
-        if self.busy:
+        if not self.busy_lock.acquire(blocking=False):
+            # A point cloud is already being processed. We deliberately
+            # DROP this one rather than queue it — by the time we'd get
+            # to it, a fresher cloud will already be available, and the
+            # arm only ever wants the latest grasp candidate, not a
+            # backlog of stale ones.
+            self.get_logger().debug(
+                "Grasp node busy — dropping this point cloud."
+            )
             return
-        self.busy = True
         try:
             points = pointcloud2_to_numpy(cloud_msg)
             
@@ -103,14 +126,26 @@ class GraspNode(Node):
                 max_grasps = self.max_grasps,
             )
             
-            response = self.client.infer(request)
+            response = self.client.infer(
+                request,
+                max_retries=self.server_max_retries,
+            )
             
             if response is None:
                 
                 self.get_logger().warn(
-                    "Inference server did not respond."
+                    f"Inference server did not respond within "
+                    f"{self.client.last_latency_ms:.0f} ms "
+                    f"(timeout={self.server_timeout_ms} ms). If this "
+                    f"repeats in tight, regular intervals, the server "
+                    f"is behind, not down — consider raising "
+                    f"server_timeout_ms."
                 )
                 return
+            self.get_logger().debug(
+                f"Inference round trip: "
+                f"{self.client.last_latency_ms:.0f} ms."
+            )
             if not response.ok():
                 self.get_logger().warn(
                     response.message
@@ -197,7 +232,7 @@ class GraspNode(Node):
                 f"frame={grasp_msg.header.frame_id})"
             )
         finally:
-            self.busy = False
+            self.busy_lock.release()
             
             
 def main():

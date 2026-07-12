@@ -41,5 +41,8 @@ Thumbs.db
 # Logs
 *.log
 
+# Windows Zone Identifier metadata
+*:Zone.Identifier
+
 # Third-party libraries
 inference_server/third_party/contact_graspnet/
