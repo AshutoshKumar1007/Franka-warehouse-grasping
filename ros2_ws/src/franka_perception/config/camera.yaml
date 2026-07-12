@@ -1,0 +1,14 @@
+# Overhead camera placement and frame naming.
+# Depth-axis convention (roll=0, pitch=1.5708, yaw=0) was verified empirically
+# for Gazebo Fortress's rgbd_camera sensor: its local X is the depth axis,
+# not the usual optical-frame Z. See docs/report.md for the verification steps.
+camera:
+  position: {x: 0.45, y: -0.3, z: 1.8}
+  orientation_rpy: {roll: 0.0, pitch: 1.5708, yaw: 0.0}
+  parent_frame: world
+  camera_frame: overhead_camera/camera_link/rgbd
+
+perception:
+  target_frame: fr3_link0
+  input_prefix: /rgbd_camera
+  output_prefix: /perception
