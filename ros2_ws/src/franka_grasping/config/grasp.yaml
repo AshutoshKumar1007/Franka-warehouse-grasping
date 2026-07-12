@@ -1,0 +1,12 @@
+grasp_node:
+  ros__parameters:
+
+    input_topic: "/preprocessing/points"
+    output_topic: "/selected_grasp"
+
+    server_host: "localhost"
+    server_port: 5555
+
+    max_grasps: 50
+    score_threshold: 0.10
+  
