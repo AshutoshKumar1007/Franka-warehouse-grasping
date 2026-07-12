@@ -150,16 +150,16 @@ This organization keeps the robotics stack independent of any particular grasp g
 # 1 — simulation
 cd ~/Vegam && source activate.sh
 ros2 launch franka_warehouse_world warehouse.launch.py \
-    world:=test load_gripper:=true rviz:=false
+    world:=small load_gripper:=true rviz:=false
 
 # 2 — MoveIt
 cd ~/Vegam && source activate.sh
 ros2 launch franka_warehouse_world moveit.launch.py \
-    world:=test load_gripper:=true
+    world:=small load_gripper:=true
 
 # 3 — perception
 cd ~/Vegam && source activate.sh
-ros2 launch franka_perception perception.launch.py world_name:=warehouse_world_test
+ros2 launch franka_perception perception.launch.py world_name:=warehouse_box_small
 
 # 4 — preprocessing
 cd ~/Vegam && source activate.sh
