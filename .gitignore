@@ -40,3 +40,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Third-party libraries
+inference_server/third_party/contact_graspnet/
